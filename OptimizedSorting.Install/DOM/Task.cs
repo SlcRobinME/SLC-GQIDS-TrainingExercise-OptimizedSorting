@@ -20,8 +20,8 @@
 				.WithID(TaskDomMapper.TaskProperties.SectionDefinitionId)
 				.WithName("Task Properties")
 				.AddFieldDescriptor(new FieldDescriptorBuilder()
-					.WithID(TaskDomMapper.TaskProperties.ID)
-					.WithName(nameof(TaskDomMapper.TaskProperties.ID))
+					.WithID(TaskDomMapper.TaskProperties.TaskID)
+					.WithName("Task ID")
 					.WithType(typeof(string))
 					.WithIsOptional(true)
 					.WithTooltip("The unique identifier for the task."))
@@ -148,7 +148,7 @@
 			foreach (var data in taskData)
 			{
 				var task = new TaskInstance(data.Guid);
-				task.TaskProperties.ID = data.ID;
+				task.TaskProperties.TaskID = data.ID;
 				task.TaskProperties.Title = data.Title;
 				task.TaskProperties.Description = data.Description;
 				task.TaskProperties.Status = data.Status;
@@ -156,7 +156,6 @@
 				task.TaskProperties.Customer = data.Customer;
 
 				tasks.Add(task);
-				Log(string.Format("Created task: {0}", task.TaskProperties.ID));
 			}
 
 			Log("Successfully generated 50 task instances.");

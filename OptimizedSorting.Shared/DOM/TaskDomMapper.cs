@@ -20,7 +20,7 @@
 				ModuleId = ModuleId,
 			};
 
-			internal static FieldDescriptorID ID = new FieldDescriptorID(new Guid("e9f79ec7-7592-4d18-b05c-fb0c30d54ba0"));
+			internal static FieldDescriptorID TaskID = new FieldDescriptorID(new Guid("e9f79ec7-7592-4d18-b05c-fb0c30d54ba0"));
 			internal static FieldDescriptorID Title = new FieldDescriptorID(new Guid("8598f620-f223-4f09-8d0a-dc3d601aa4d7"));
 			internal static FieldDescriptorID Description = new FieldDescriptorID(new Guid("5eb6a517-8783-42ca-8a60-be186d6c4f8f"));
 			internal static FieldDescriptorID Status = new FieldDescriptorID(new Guid("40c176ad-9335-4047-9dd5-5b27e55ed1f8"));

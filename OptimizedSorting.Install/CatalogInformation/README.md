@@ -21,4 +21,4 @@ This will deploy the following:
 1. 50 Dummy tasks and
 1. the initial Data-Source
 
-From here you can start on the actual implementation.
+From here you can start on the actual implementation. The source code is available by clicking the Source button on the right. The data source is available in the `OptimizedSorting.GQI` project.

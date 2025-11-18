@@ -112,7 +112,7 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 		{
 			return new GQIRow(Convert.ToString(task.ID.Id), new[]
 			{
-				new GQICell { Value = task.TaskProperties.ID, },
+				new GQICell { Value = task.TaskProperties.TaskID, },
 				new GQICell { Value = task.TaskProperties.Title, },
 				new GQICell { Value = task.TaskProperties.Description, },
 				new GQICell { Value = (int)task.TaskProperties.Status, DisplayValue = Enum.GetName(typeof(ExerciseTasksIds.Enums.Status), task.TaskProperties.Status), },

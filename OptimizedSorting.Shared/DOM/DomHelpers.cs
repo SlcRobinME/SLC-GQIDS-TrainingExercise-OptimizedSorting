@@ -481,7 +481,7 @@ namespace DomHelpers.ExerciseTasks
 			{
 				public static SectionDefinitionID Id { get; } = new SectionDefinitionID(new Guid("81d78c00-318e-4dcf-a3ae-2d43955a83ed"))
 				{ ModuleId = "(exercise)tasks" };
-				public static FieldDescriptorID ID { get; } = new FieldDescriptorID(new Guid("e9f79ec7-7592-4d18-b05c-fb0c30d54ba0"));
+				public static FieldDescriptorID TaskID { get; } = new FieldDescriptorID(new Guid("e9f79ec7-7592-4d18-b05c-fb0c30d54ba0"));
 				public static FieldDescriptorID Title { get; } = new FieldDescriptorID(new Guid("8598f620-f223-4f09-8d0a-dc3d601aa4d7"));
 				public static FieldDescriptorID Description { get; } = new FieldDescriptorID(new Guid("5eb6a517-8783-42ca-8a60-be186d6c4f8f"));
 				public static FieldDescriptorID Status { get; } = new FieldDescriptorID(new Guid("40c176ad-9335-4047-9dd5-5b27e55ed1f8"));
@@ -669,7 +669,7 @@ namespace DomHelpers.ExerciseTasks
 		}
 
 		/// <summary>
-		/// Gets or sets the ID field of the DOM Instance.
+		/// Gets or sets the TaskID field of the DOM Instance.
 		/// </summary>
 		/// <remarks>
 		/// When retrieving the value:
@@ -683,11 +683,11 @@ namespace DomHelpers.ExerciseTasks
 		/// <item>- If a valid value is assigned, the field value will be added or updated in the section.</item>
 		/// </list>
 		/// </remarks>
-		public String ID
+		public String TaskID
 		{
 			get
 			{
-				var wrapper = section.GetValue<String>(ExerciseTasksIds.Sections.TaskProperties.ID);
+				var wrapper = section.GetValue<String>(ExerciseTasksIds.Sections.TaskProperties.TaskID);
 				if (wrapper != null)
 				{
 					return (String)wrapper.Value;
@@ -702,11 +702,11 @@ namespace DomHelpers.ExerciseTasks
 			{
 				if (value == null)
 				{
-					section.RemoveFieldValueById(ExerciseTasksIds.Sections.TaskProperties.ID);
+					section.RemoveFieldValueById(ExerciseTasksIds.Sections.TaskProperties.TaskID);
 				}
 				else
 				{
-					section.AddOrUpdateValue(ExerciseTasksIds.Sections.TaskProperties.ID, (String)value);
+					section.AddOrUpdateValue(ExerciseTasksIds.Sections.TaskProperties.TaskID, (String)value);
 				}
 			}
 		}
