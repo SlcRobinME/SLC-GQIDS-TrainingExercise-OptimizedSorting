@@ -25,6 +25,7 @@ jobs:
         
     - name: Validate DataMiner Secret Token
       id: validate-dataminer-token
+      continue-on-error: true
       run: |
         if [[ -z "${{ secrets.DATAMINER_TOKEN }}" ]]; then
           echo "Error: DATAMINER_TOKEN is not set. Release not possible!"
@@ -33,7 +34,11 @@ jobs:
           echo "Copy the value of the token."
           repo_url="https://github.com/${{ github.repository }}/settings/secrets/actions"
           echo "Then set a DATAMINER_TOKEN secret in your repository settings: $repo_url"
+          echo "token-valid=false" >> $GITHUB_OUTPUT
           exit 1
+        else
+          echo "DATAMINER_TOKEN is set and valid."
+          echo "token-valid=true" >> $GITHUB_OUTPUT
         fi
 
     - name: Setup .NET Core
@@ -76,7 +81,7 @@ jobs:
       run: dotnet test -c Release
       
     - name: Publish Prerelease
-      if: github.ref_type == 'branch'
+      if: github.ref_type == 'branch' && steps.validate-dataminer-token.outputs.token-valid == 'true'
       env:
         DATAMINER_TOKEN: ${{ secrets.DATAMINER_TOKEN }}
       shell: pwsh
@@ -89,7 +94,7 @@ jobs:
           -c Release `
 
     - name: Publish Release
-      if: github.ref_type == 'tag'
+      if: github.ref_type == 'tag' && steps.validate-dataminer-token.outputs.token-valid == 'true'
       env:
         DATAMINER_TOKEN: ${{ secrets.DATAMINER_TOKEN }}
       shell: pwsh
