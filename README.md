@@ -17,8 +17,8 @@ For this exercise you'll start from an already existing Data-Source. You can ins
 
 This will deploy the following:
 
-1. A dom module called `(exercise)tasks`,
+1. A DOM module called `(exercise)tasks`,
 1. 50 Dummy tasks and
-1. the initial data source.
+1. The initial data source.
 
 From here you can start on the actual implementation. You will find the source code of the data source in the OptimizedSorting.GQI project.
