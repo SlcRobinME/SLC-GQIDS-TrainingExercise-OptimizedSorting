@@ -58,13 +58,22 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 	using DomHelpers.ExerciseTasks;
 
 	using Skyline.DataMiner.Analytics.GenericInterface;
+	using Skyline.DataMiner.Analytics.GenericInterface.Operators;
 	using Skyline.DataMiner.Exercise.OptimizedSorting.Shared.DOM;
 	using Skyline.DataMiner.Net.Apps.DataMinerObjectModel;
 	using Skyline.DataMiner.Net.Messages.SLDataGateway;
+	using Skyline.DataMiner.Net.Sections;
+	using SLDataGateway.API.Querying;
+	using SLDataGateway.API.Types.Querying;
 
 	[GQIMetaData(Name = "Exercise - Optimized Tasks")]
-	public sealed class OptimizedSorting : IGQIDataSource, IGQIOnInit
+	public sealed class OptimizedSorting : IGQIDataSource, IGQIOnInit, IGQIOptimizableDataSource, IGQIOnPrepareFetch
 	{
+		// Mapping: FieldDescriptorID key -> GQIColumn
+		private static readonly Dictionary<FieldDescriptorID, GQIColumn> _exposerToColumn = new Dictionary<FieldDescriptorID, GQIColumn>();
+
+		private static readonly Dictionary<FieldDescriptorID, GQIColumn> _fieldToColumn;
+
 		private static readonly List<GQIColumn> _columns = new List<GQIColumn>
 		{
 			new GQIStringColumn("ID"),
@@ -75,6 +84,18 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 			new GQIStringColumn("Customer"),
 		};
 
+		// Mapping: GQIColumn -> FieldDescriptorID
+		private static readonly Dictionary<GQIColumn, FieldDescriptorID> _columnToField = new Dictionary<GQIColumn, FieldDescriptorID>
+		{
+			{ _columns[0], TaskDomMapper.TaskProperties.TaskID },
+			{ _columns[1], TaskDomMapper.TaskProperties.Title },
+			{ _columns[2], TaskDomMapper.TaskProperties.Description },
+			{ _columns[3], TaskDomMapper.TaskProperties.Status },
+			{ _columns[4], TaskDomMapper.TaskProperties.Assignee },
+			{ _columns[5], TaskDomMapper.TaskProperties.Customer },
+		};
+
+		private IGQISortOperator _sortOperator;
 		private IGQILogger _logger;
 		private DomHelper _helper;
 
@@ -87,12 +108,57 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 
 		public GQIColumn[] GetColumns() => _columns.ToArray();
 
+		public IGQIQueryNode Optimize(IGQIDataSourceNode currentNode, IGQICoreOperator nextOperator)
+		{
+			if (nextOperator.IsSortOperator(out var sortOperator))
+			{
+				_sortOperator = sortOperator;
+				return currentNode;
+			}
+
+			return currentNode.Append(nextOperator);
+		}
+
+		public OnPrepareFetchOutputArgs OnPrepareFetch(OnPrepareFetchInputArgs args)
+		{
+			return default;
+		}
+
 		public GQIPage GetNextPage(GetNextPageInputArgs args)
 		{
 			try
 			{
 				var filter = DomInstanceExposers.DomDefinitionId.Equal(TaskDomMapper.DomDefinitionId.Id);
-				var instances = _helper.DomInstances.Read(filter);
+				IQuery<DomInstance> query = null;
+
+				if (_sortOperator != null)
+				{
+					_logger.Information($"[OptimizedSorting] Sort operator detected with {_sortOperator.Fields.Count} field(s).");
+
+					foreach (var sortField in _sortOperator.Fields)
+					{
+						var match = _columnToField.FirstOrDefault(kvp => sortField.Column.Equals(kvp.Key));
+
+						if (match.Key == null)
+						{
+							_logger.Warning("[OptimizedSorting] Column not found in mapping, skipping.");
+							continue;
+						}
+
+						_logger.Information($"[OptimizedSorting] Applying sort on FieldDescriptorID: {match.Value.Id}");
+
+						var field = DomInstanceExposers.FieldValues.DomInstanceField(match.Value);
+
+						query = sortField.Direction == GQISortDirection.Descending
+							? filter.OrderByDescending(field)
+							: filter.OrderBy(field);
+					}
+				}
+
+				var instances = query != null
+					? _helper.DomInstances.Read(query)
+					: _helper.DomInstances.Read(filter);
+				_logger.Information($"[OptimizedSorting] Fetched {instances.Count()} instances from database.");
 
 				return new GQIPage(instances
 					.Select(i => new TaskInstance(i))
@@ -101,31 +167,27 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 			}
 			catch (Exception ex)
 			{
-				_logger.Error(ex.Message);
-				_logger.Error(ex.StackTrace);
+				_logger.Error($"[OptimizedSorting] Exception: {ex.Message}");
+				_logger.Error($"[OptimizedSorting] StackTrace: {ex.StackTrace}");
 				throw;
 			}
 		}
 
-		[System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.ReadabilityRules", "SA1118:Parameter should not span multiple lines", Justification = "More readable this way")]
 		private static GQIRow CreateRow(TaskInstance task)
 		{
 			return new GQIRow(Convert.ToString(task.ID.Id), new[]
 			{
-				new GQICell { Value = task.TaskProperties.TaskID, },
-				new GQICell { Value = task.TaskProperties.Title, },
-				new GQICell { Value = task.TaskProperties.Description, },
-				new GQICell { Value = (int)task.TaskProperties.Status, DisplayValue = Enum.GetName(typeof(ExerciseTasksIds.Enums.Status), task.TaskProperties.Status), },
-				new GQICell { Value = task.TaskProperties.Assignee, },
-				new GQICell { Value = task.TaskProperties.Customer, },
+				new GQICell { Value = task.TaskProperties.TaskID },
+				new GQICell { Value = task.TaskProperties.Title },
+				new GQICell { Value = task.TaskProperties.Description },
+				new GQICell { Value = (int)task.TaskProperties.Status, DisplayValue = Enum.GetName(typeof(ExerciseTasksIds.Enums.Status), task.TaskProperties.Status) },
+				new GQICell { Value = task.TaskProperties.Assignee },
+				new GQICell { Value = task.TaskProperties.Customer },
 			})
 			{
 				Metadata = new GenIfRowMetadata(new[]
 				{
-					new ObjectRefMetadata
-					{
-						Object = task.ID,
-					},
+					new ObjectRefMetadata { Object = task.ID },
 				}),
 			};
 		}
