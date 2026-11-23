@@ -58,12 +58,15 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 	using DomHelpers.ExerciseTasks;
 
 	using Skyline.DataMiner.Analytics.GenericInterface;
+	using Skyline.DataMiner.Analytics.GenericInterface.Operators;
 	using Skyline.DataMiner.Exercise.OptimizedSorting.Shared.DOM;
 	using Skyline.DataMiner.Net.Apps.DataMinerObjectModel;
 	using Skyline.DataMiner.Net.Messages.SLDataGateway;
+	using SLDataGateway.API.Querying;
+	using SLDataGateway.API.Types.Querying;
 
 	[GQIMetaData(Name = "Exercise - Optimized Tasks")]
-	public sealed class OptimizedSorting : IGQIDataSource, IGQIOnInit
+	public sealed class OptimizedSorting : IGQIDataSource, IGQIOnInit, IGQIOptimizableDataSource, IGQIOnPrepareFetch
 	{
 		private static readonly List<GQIColumn> _columns = new List<GQIColumn>
 		{
@@ -75,8 +78,20 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 			new GQIStringColumn("Customer"),
 		};
 
+		private static readonly Dictionary<string, FieldExposer> _exposers = new Dictionary<string, FieldExposer>
+		{
+			["ID"] = DomInstanceExposers.FieldValues.DomInstanceField(TaskDomMapper.TaskProperties.TaskID),
+			["Title"] = DomInstanceExposers.FieldValues.DomInstanceField(TaskDomMapper.TaskProperties.Title),
+			["Description"] = DomInstanceExposers.FieldValues.DomInstanceField(TaskDomMapper.TaskProperties.Description),
+			["Status"] = DomInstanceExposers.FieldValues.DomInstanceField(TaskDomMapper.TaskProperties.Status),
+			["Assignee"] = DomInstanceExposers.FieldValues.DomInstanceField(TaskDomMapper.TaskProperties.Assignee),
+			["Customer"] = DomInstanceExposers.FieldValues.DomInstanceField(TaskDomMapper.TaskProperties.Customer),
+		};
+
 		private IGQILogger _logger;
 		private DomHelper _helper;
+		private IGQISortOperator _sortOperator;
+		private IQuery<DomInstance> _query;
 
 		public OnInitOutputArgs OnInit(OnInitInputArgs args)
 		{
@@ -91,8 +106,7 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 		{
 			try
 			{
-				var filter = DomInstanceExposers.DomDefinitionId.Equal(TaskDomMapper.DomDefinitionId.Id);
-				var instances = _helper.DomInstances.Read(filter);
+				var instances = _helper.DomInstances.Read(_query);
 
 				return new GQIPage(instances
 					.Select(i => new TaskInstance(i))
@@ -105,6 +119,45 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 				_logger.Error(ex.StackTrace);
 				throw;
 			}
+		}
+
+		public IGQIQueryNode Optimize(IGQIDataSourceNode currentNode, IGQICoreOperator nextOperator)
+		{
+			if (nextOperator is IGQISortOperator sortOperator && sortOperator.Fields.All(field => TryGetExposer(field.Column, out _)))
+			{
+				_sortOperator = sortOperator;
+				return currentNode;
+			}
+
+			return currentNode.Append(nextOperator);
+		}
+
+		public OnPrepareFetchOutputArgs OnPrepareFetch(OnPrepareFetchInputArgs args)
+		{
+			FilterElement<DomInstance> filter = DomInstanceExposers.DomDefinitionId.Equal(TaskDomMapper.DomDefinitionId.Id);
+			IQuery<DomInstance> query = filter.ToQuery();
+
+			if (_sortOperator != null)
+			{
+				for (int i = 0; i < _sortOperator.Fields.Count; i++)
+				{
+					IGQISortField field = _sortOperator.Fields[i];
+					TryGetExposer(field.Column, out FieldExposer exposer);
+					bool descending = field.Direction == GQISortDirection.Descending;
+
+					if (i == 0)
+					{
+						query = descending ? query.OrderByDescending(exposer) : query.OrderBy(exposer);
+					}
+					else
+					{
+						query = descending ? query.ThenByDescending(exposer) : query.ThenBy(exposer);
+					}
+				}
+			}
+
+			_query = query;
+			return default;
 		}
 
 		[System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.ReadabilityRules", "SA1118:Parameter should not span multiple lines", Justification = "More readable this way")]
@@ -128,6 +181,12 @@ namespace Skyline.DataMiner.Exercise.OptimizedSorting.GQI
 					},
 				}),
 			};
+		}
+
+		private static bool TryGetExposer(IGQIColumn column, out FieldExposer exposer)
+		{
+			exposer = null;
+			return column is GQIColumn gqiColumn && _exposers.TryGetValue(gqiColumn.Name, out exposer);
 		}
 	}
 }
